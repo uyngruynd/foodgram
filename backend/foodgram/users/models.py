@@ -4,8 +4,15 @@ from django.db import models
 
 class User(AbstractUser):
     """Переопределенная модель пользователя."""
+    username = models.CharField(max_length=200, unique=True, )
+    email = models.EmailField(max_length=200, unique=True, )
+    first_name = models.CharField(max_length=200, )
+    last_name = models.CharField(max_length=200, )
+    password = models.CharField(max_length=200, )
     shopping_list = models.ManyToManyField('recipes.Recipe',
                                            through='recipes.ShoppingList', )
+
+    REQUIRED_FIELDS = ['first_name', 'last_name', ]
 
 
 class Follow(models.Model):

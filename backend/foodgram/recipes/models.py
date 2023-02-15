@@ -6,35 +6,49 @@ User = get_user_model()
 
 class Tag(models.Model):
     """Модель для работы с тегами."""
-    name = models.CharField(max_length=200, unique=True, )
-    color = models.CharField(max_length=16, unique=True, )
-    slug = models.SlugField(max_length=50, unique=True, )
+    name = models.CharField(max_length=200, )
+    color = models.CharField(max_length=16, )
+    slug = models.SlugField(max_length=50, )
 
     def __str__(self):
         return self.name
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'color', 'slug', ],
+                                    name='unique tag', )
+        ]
+
 
 class Ingredient(models.Model):
     """Модель для работы с ингредиентами."""
-    name = models.CharField(max_length=200, unique=True, )
+    name = models.CharField(max_length=200, )
     measurement_unit = models.CharField(max_length=20, )
 
     def __str__(self):
         return self.name
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'measurement_unit'],
+                                    name='unique ingredient', )
+        ]
+
 
 class Recipe(models.Model):
     """Модель для работы с рецептами."""
-    author = models.ForeignKey(User, on_delete=models.CASCADE, )
+    author = models.ForeignKey(User, on_delete=models.CASCADE,
+                               related_name='recipes')
     name = models.CharField(max_length=200, )
     image = models.ImageField(
         'Картинка',
-        upload_to='recipes/',
+        upload_to='recipes/images/',
     )
     text = models.TextField()
     ingredients = models.ManyToManyField(Ingredient,
-                                         through='IngredientRecipe', )
-    tags = models.ManyToManyField(Tag)
+                                         through='IngredientRecipe',
+                                         related_name='recipes')
+    tags = models.ManyToManyField(Tag, related_name='recipes')
     cooking_time = models.PositiveSmallIntegerField()
     pub_date = models.DateTimeField(auto_now_add=True, )
 
