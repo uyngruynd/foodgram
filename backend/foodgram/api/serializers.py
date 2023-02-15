@@ -1,11 +1,11 @@
 import base64
 
-from rest_framework import serializers
-# from users.models import User
 from django.contrib.auth import get_user_model
-from recipes.models import Tag, Ingredient, Recipe, IngredientRecipe
 from django.core.files.base import ContentFile
-from djoser.serializers import UserSerializer, UserCreateSerializer
+from djoser.serializers import UserCreateSerializer, UserSerializer
+from recipes.models import Ingredient, IngredientRecipe, Recipe, Tag
+from rest_framework import serializers
+from users.models import Follow
 
 User = get_user_model()
 
@@ -57,7 +57,7 @@ class Base64ImageField(serializers.ImageField):
 
 class RecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
-    ingredients = IngredientSerializer(many=True, read_only=True)
+    ingredients = IngredientSerializer(many=True, )
     image = Base64ImageField(required=False, allow_null=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -89,7 +89,8 @@ class RecipeGETSerializer(RecipeSerializer):
 
 
 class RecipePOSTSerializer(RecipeSerializer):
-    tags = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    tags = serializers.PrimaryKeyRelatedField(many=True,
+                                              queryset=Tag.objects.all())
 
     def to_representation(self, instance):
         output = super().to_representation(instance)
@@ -100,12 +101,12 @@ class RecipePOSTSerializer(RecipeSerializer):
         output['tags'] = new_tags
         return output
 
-    # def to_internal_value(self, data):
-    #     # ingredients = data.get('ingredients')
-    #     # for ingredient in ingredients:
-    #     #     ingredient['name'] = Ingredient.objects.values().get(
-    #     #         id=ingredient['id'])['name']
-    #      return data
+    def to_internal_value(self, data):
+        ingredients = data.get('ingredients')
+        for ingredient in ingredients:
+            ingredient['name'] = (
+                Ingredient.objects.values().get(id=ingredient['id'])['name'])
+        return data
 
     def create(self, validated_data):
         tags = validated_data.pop('tags')
@@ -122,3 +123,29 @@ class RecipePOSTSerializer(RecipeSerializer):
                                             amount=ingredient.get(
                                                 'amount'))
         return recipe
+
+    def update(self, instance, validated_data):
+        instance.tags.set(validated_data.get('tags', instance.tags))
+        instance.image = validated_data.get('image', instance.image)
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text', instance.text)
+        instance.cooking_time = validated_data.get('cooking_time',
+                                                   instance.cooking_time)
+        ingredients = validated_data.pop('ingredients')
+        IngredientRecipe.objects.filter(recipe=instance).delete()
+        for ingredient in ingredients:
+            IngredientRecipe.objects.get_or_create(
+                ingredient_id=ingredient.get('id'), recipe=instance,
+                amount=ingredient.get('amount'))
+        instance.save()
+
+        return instance
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = '__all__'
+
+    def create(self, validated_data):
+        pass

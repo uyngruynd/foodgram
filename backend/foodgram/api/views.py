@@ -1,12 +1,14 @@
-from rest_framework import permissions, viewsets
 # from users.models import User
 from django.contrib.auth import get_user_model
-from recipes.models import Tag, Ingredient, Recipe
-from .serializers import (TagSerializer, IngredientSerializer,
-                          RecipeSerializer, RecipeGETSerializer,
-                          RecipePOSTSerializer, UserSerializer)
+from recipes.models import Ingredient, Recipe, Tag
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from users.models import Follow
+
+from .serializers import (FollowSerializer, IngredientSerializer,
+                          RecipeGETSerializer, RecipePOSTSerializer,
+                          RecipeSerializer, TagSerializer)
 
 User = get_user_model()
 
@@ -58,3 +60,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     # @action(detail=True, methods=['get'])
     # def me(self, request):
     #     return Response({'r': request.user.username})
+
+class SubscriptionsViewSet(viewsets.ModelViewSet):
+    queryset = Follow.objects.all()
+    serializer_class = FollowSerializer
