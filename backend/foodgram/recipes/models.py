@@ -61,8 +61,7 @@ class Recipe(models.Model):
 
 class IngredientRecipe(models.Model):
     """Модель, связывающая рецепт с ингредиентами."""
-    ingredient = models.ForeignKey(Ingredient,
-                                   on_delete=models.CASCADE, )
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, )
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, )
     amount = models.PositiveSmallIntegerField()
 

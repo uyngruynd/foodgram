@@ -16,7 +16,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author',)
     list_filter = ('name', 'author', 'tags',)
     empty_value_display = '-пусто-'
-    # inlines = [TagInline, IngredientInline, ]
+    # inlines = [TagInline, IngredientInline, ] # FIXME
 
     # TODO: На странице рецепта вывести общее число добавлений этого рецепта в избранное
 

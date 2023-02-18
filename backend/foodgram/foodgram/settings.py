@@ -144,6 +144,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_ID_FIELD': 'id',
+    'HIDE_USERS': False,
     'SERIALIZERS': {
         'user': 'api.serializers.CustomUserSerializer',
         'current_user': 'api.serializers.CustomUserSerializer',

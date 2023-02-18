@@ -27,8 +27,8 @@ class CustomUserSerializer(UserSerializer):
             'is_subscribed',)
 
     def get_is_subscribed(self, obj):
-        # FIXME !!!
-        return False
+        return Follow.objects.filter(user=self.context['request'].user,
+                                     author=obj).exists()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -56,9 +56,9 @@ class Base64ImageField(serializers.ImageField):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True)
+    author = UserSerializer(read_only=True, )
     ingredients = IngredientSerializer(many=True, )
-    image = Base64ImageField(required=False, allow_null=True)
+    image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -140,12 +140,3 @@ class RecipePOSTSerializer(RecipeSerializer):
         instance.save()
 
         return instance
-
-
-class FollowSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Follow
-        fields = '__all__'
-
-    def create(self, validated_data):
-        pass
