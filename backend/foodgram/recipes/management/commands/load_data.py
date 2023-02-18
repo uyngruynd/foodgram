@@ -2,6 +2,7 @@ import logging
 from csv import DictReader
 
 from django.core.management import BaseCommand
+
 from recipes.models import Ingredient
 
 files_to_download = {

@@ -1,12 +1,12 @@
-# from users.models import User
 from django.contrib.auth import get_user_model
-from recipes.models import Ingredient, Recipe, Tag
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from recipes.models import FavoritesList, Ingredient, Recipe, Tag
 from users.models import Follow
 
-from .serializers import (CustomUserSerializer, CustomUserCreateSerializer,
+from .serializers import (CustomUserCreateSerializer, CustomUserSerializer,
                           IngredientSerializer, RecipeGETSerializer,
                           RecipePOSTSerializer, RecipeSerializer,
                           TagSerializer)
@@ -15,20 +15,24 @@ User = get_user_model()
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """Вьюсет для работы с моделью Tag."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    """Вьюсет для работы с моделью Ingredient."""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с моделью Recipe."""
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.request.method in ['POST', 'PATCH']:
@@ -38,15 +42,32 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def get_permissions(self):
-        if self.action in ['get', 'list']:
-            permission_classes = (permissions.AllowAny,)
+    @action(methods=['post', 'delete'], detail=True,
+            url_path='favorite', )
+    def get_favorite(self, request, pk):
+        recipe = Recipe.objects.get(pk=pk)
+
+        favorite = FavoritesList.objects.filter(recipe=recipe,
+                                                user=self.request.user)
+        serializer = self.get_serializer(recipe)
+
+        if request.method == "POST":
+            if favorite.exists():
+                return Response('Этот рецепт уже в избранном!',
+                                status=status.HTTP_400_BAD_REQUEST, )
+            new_favorite = FavoritesList(recipe=recipe, user=self.request.user)
+            new_favorite.save()
+            return Response(serializer.data)
         else:
-            permission_classes = (permissions.IsAuthenticated,)
-        return [permission() for permission in permission_classes]
+            if not favorite.exists():
+                return Response('Этого рецепта нет в избранном!',
+                                status=status.HTTP_400_BAD_REQUEST, )
+            favorite.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с моделью User."""
     queryset = User.objects.all()
 
     def get_serializer_class(self):
@@ -112,7 +133,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 return Response('Вы не подписаны на этого автора!',
                                 status=status.HTTP_400_BAD_REQUEST, )
             follow.delete()
-            return Response({'errors': ''})
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, url_path='me')
     def me(self, request):
