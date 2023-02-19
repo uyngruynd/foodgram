@@ -38,6 +38,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'rest_framework.authtoken',
+    'django_filters',
     'djoser',
     'users',
     'recipes',
@@ -138,8 +139,7 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 6,
 }
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 DJOSER = {
     'LOGIN_FIELD': 'email',

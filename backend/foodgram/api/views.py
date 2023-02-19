@@ -1,11 +1,16 @@
 from django.contrib.auth import get_user_model
-from rest_framework import permissions, status, viewsets
+from django.db.models import Sum
+from django.http import HttpResponse
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from recipes.models import FavoritesList, Ingredient, Recipe, Tag
+from recipes.models import (FavoritesList, Ingredient, IngredientRecipe,
+                            Recipe, ShoppingList, Tag)
 from users.models import Follow
 
+from .permissions import IsAuthorOrReadOnly
 from .serializers import (CustomUserCreateSerializer, CustomUserSerializer,
                           IngredientSerializer, RecipeGETSerializer,
                           RecipePOSTSerializer, RecipeSerializer,
@@ -26,13 +31,17 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
+    filter_backends = (filters.SearchFilter, )
+    search_fields = ('name', )
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с моделью Recipe."""
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated, IsAuthorOrReadOnly, )
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('author', 'tags',)
 
     def get_serializer_class(self):
         if self.request.method in ['POST', 'PATCH']:
@@ -42,27 +51,64 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    @action(methods=['get'], detail=False,
+            url_path='download_shopping_cart', )
+    def get_download_shopping_cart(self, request):
+        """Функция предназначена для выгрузки в файл списка покупок."""
+        recipes_list = list(ShoppingList.objects.filter(
+            user=self.request.user).values_list('recipe', flat=True))
+        ingredients = IngredientRecipe.objects.filter(
+            recipe_id__in=
+            recipes_list).values('ingredient__name',
+                                 'ingredient__measurement_unit').annotate(
+            total_amount=Sum('amount'))
+
+        response = HttpResponse(content_type='text/plain')
+        response[
+            'Content-Disposition'] = (
+            'attachment; filename="my_shopping_cart.txt"')
+
+        response.write('Мой список покупок:\n')
+        for row_num, ingredient in enumerate(ingredients, start=1):
+            response.write(
+                f'{row_num}: {ingredient.get("ingredient__name")} - '
+                f'{ingredient.get("total_amount")} '
+                f'{ingredient.get("ingredient__measurement_unit")}\n')
+
+        return response
+
+    @action(methods=['post', 'delete'], detail=True,
+            url_path='shopping_cart', )
+    def get_shopping_cart(self, request, pk):
+        """Функция для работы с корзиной."""
+        return self.__add_delete_recipe_relation(request, pk, ShoppingList,
+                                                 'корзине!')
+
     @action(methods=['post', 'delete'], detail=True,
             url_path='favorite', )
     def get_favorite(self, request, pk):
+        """Функция для работы с избранным."""
+        return self.__add_delete_recipe_relation(request, pk, FavoritesList,
+                                                 'избранном!')
+
+    def __add_delete_recipe_relation(self, request, pk, model, table_name):
         recipe = Recipe.objects.get(pk=pk)
 
-        favorite = FavoritesList.objects.filter(recipe=recipe,
-                                                user=self.request.user)
+        obj = model.objects.filter(recipe=recipe, user=self.request.user)
         serializer = self.get_serializer(recipe)
 
         if request.method == "POST":
-            if favorite.exists():
-                return Response('Этот рецепт уже в избранном!',
+            if obj.exists():
+                return Response(f'Этот рецепт уже в {table_name}',
                                 status=status.HTTP_400_BAD_REQUEST, )
-            new_favorite = FavoritesList(recipe=recipe, user=self.request.user)
-            new_favorite.save()
+            new_obj = model(recipe=recipe, user=self.request.user)
+            new_obj.save()
             return Response(serializer.data)
         else:
-            if not favorite.exists():
-                return Response('Этого рецепта нет в избранном!',
+            if not obj.exists():
+                return Response(f'Этого рецепта нет в {table_name}',
                                 status=status.HTTP_400_BAD_REQUEST, )
-            favorite.delete()
+            obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -84,8 +130,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(methods=['get'], detail=False, url_path='subscriptions', )
     def subscriptions(self, request):
-        # FIXME - тут нужно написать запрос через select_related
-        # authors = Follow.objects.filter(user=self.request.user).select_related('author')
+        """Функция возвращает список подписок."""
         follows = Follow.objects.filter(user=self.request.user)
         authors = []
         for follow in follows:
@@ -106,6 +151,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(methods=['post', 'delete'], detail=False,
             url_path=r'(?P<pk>\d+)/subscribe', )
     def subscribe(self, request, pk):
+        """Функция для работы с подписками."""
         author = User.objects.get(pk=pk)
 
         if author == self.request.user:
@@ -137,6 +183,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, url_path='me')
     def me(self, request):
+        """Функция возвращает данные профиля текущего пользователя."""
         me = self.request.user
         serializer = self.get_serializer(me)
         return Response(serializer.data)

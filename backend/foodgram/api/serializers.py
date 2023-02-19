@@ -6,7 +6,7 @@ from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 
 from recipes.models import (FavoritesList, Ingredient, IngredientRecipe,
-                            Recipe, Tag)
+                            Recipe, ShoppingList, Tag)
 from users.models import Follow
 
 User = get_user_model()
@@ -14,6 +14,7 @@ User = get_user_model()
 
 class CustomUserCreateSerializer(UserCreateSerializer):
     """Описание сериализатора для модели User, запись."""
+
     class Meta:
         model = User
         fields = (
@@ -37,6 +38,7 @@ class CustomUserSerializer(UserSerializer):
 
 class TagSerializer(serializers.ModelSerializer):
     """Описание сериализатора для модели Tag"""
+
     class Meta:
         model = Tag
 
@@ -45,6 +47,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     """Описание сериализатора для модели Ingredient."""
+
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit',)
@@ -66,7 +69,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     """Описание сериализатора для модели Recipe."""
     author = UserSerializer(read_only=True, )
     ingredients = IngredientSerializer(many=True, )
-    image = Base64ImageField()
+    image = Base64ImageField(required=False, allow_null=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -90,7 +93,8 @@ class RecipeSerializer(serializers.ModelSerializer):
                                             recipe=obj).exists()
 
     def get_is_in_shopping_cart(self, obj):
-        return True  # FIXME
+        return ShoppingList.objects.filter(user=self.context['request'].user,
+                                           recipe=obj).exists()
 
 
 class RecipeGETSerializer(RecipeSerializer):

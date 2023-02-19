@@ -12,11 +12,9 @@ router.register('users', UserViewSet)
 
 
 urlpatterns = [
-
     path('api/', include(router.urls)),
     path('api/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.authtoken')),
-
     path(
         'redoc/',
         TemplateView.as_view(template_name='redoc.html'),
