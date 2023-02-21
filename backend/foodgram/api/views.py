@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
@@ -8,15 +7,13 @@ from rest_framework.response import Response
 
 from recipes.models import (FavoritesList, Ingredient, IngredientRecipe,
                             Recipe, ShoppingList, Tag)
-from users.models import Follow
+from users.models import Follow, User
 
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (CustomUserCreateSerializer, CustomUserSerializer,
                           IngredientSerializer, RecipeGETSerializer,
                           RecipePOSTSerializer, RecipeSerializer,
                           TagSerializer)
-
-User = get_user_model()
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -131,11 +128,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(methods=['get'], detail=False, url_path='subscriptions', )
     def subscriptions(self, request):
         """Функция возвращает список подписок."""
-        follows = Follow.objects.filter(user=self.request.user)
-        authors = []
-        for follow in follows:
-            authors.append(follow.author)
-
+        authors = User.objects.filter(following__user=self.request.user)
         page = self.paginate_queryset(authors)
         serializer = self.get_serializer(page, many=True)
 
