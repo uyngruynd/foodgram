@@ -17,7 +17,8 @@ class User(AbstractUser):
                                            through='recipes.ShoppingList',
                                            verbose_name='Список покупок', )
 
-    REQUIRED_FIELDS = ['first_name', 'last_name', ]
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
 
 class Follow(models.Model):

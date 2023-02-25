@@ -6,7 +6,7 @@ from django.core.management import BaseCommand
 from recipes.models import Ingredient
 
 files_to_download = {
-    Ingredient: '../../data/ingredients.csv',
+    Ingredient: './data/ingredients.csv',
 }
 logging.basicConfig(level=logging.INFO)
 
@@ -20,7 +20,7 @@ class Command(BaseCommand):
             logging.info(
                 f'Загрузка данных из файла {file} в модель {model}...')
 
-            for row in DictReader(open(f'{file}')):
+            for row in DictReader(open(f'{file}', encoding='utf8')):
                 try:
                     obj = model(**row)
                     obj.save()

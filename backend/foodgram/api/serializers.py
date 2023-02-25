@@ -1,4 +1,5 @@
 import base64
+from drf_extra_fields.fields import Base64ImageField
 
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer, UserSerializer
@@ -50,7 +51,7 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit',)
 
 
-class Base64ImageField(serializers.ImageField):
+class CustomBase64ImageField(serializers.ImageField):
     """Описание кастомного поля картинки для сериализатора RecipeSerializer."""
 
     def to_internal_value(self, data):
@@ -66,7 +67,8 @@ class RecipeSerializer(serializers.ModelSerializer):
     """Описание сериализатора для модели Recipe."""
     author = UserSerializer(read_only=True, )
     ingredients = IngredientSerializer(many=True, )
-    image = Base64ImageField(required=False, allow_null=True)
+    # image = CustomBase64ImageField(required=False, allow_null=True, )
+    image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
