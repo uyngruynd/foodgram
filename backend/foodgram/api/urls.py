@@ -2,8 +2,8 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
 
-from .views import (IngredientViewSet, RecipeViewSet, TagViewSet,
-                    CustomUserViewSet)
+from .views import (CustomUserViewSet, IngredientViewSet, RecipeViewSet,
+                    TagViewSet)
 
 router = DefaultRouter()
 router.register('tags', TagViewSet)

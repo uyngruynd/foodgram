@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SECRET_KEY = get_random_secret_key()
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -104,6 +104,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'backend_media')
 AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
@@ -111,7 +114,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_PAGINATION_CLASS':
-        'rest_framework.pagination.LimitOffsetPagination',
+        'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 6,
 }
 
@@ -131,3 +134,8 @@ DJOSER = {
         "user_list": ["rest_framework.permissions.AllowAny"],
     },
 }
+
+# try:
+#     from .settings_local import *
+# except ImportError:
+#     pass

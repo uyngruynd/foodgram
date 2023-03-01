@@ -1,20 +1,21 @@
 from django.db.models import Sum
 from django.http import HttpResponse
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import (BooleanFilter, DjangoFilterBackend,
+                                           FilterSet,
+                                           ModelMultipleChoiceFilter)
 from djoser.views import UserViewSet
+from recipes.models import (FavoritesList, Ingredient, IngredientRecipe,
+                            Recipe, ShoppingList, Tag)
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
-from recipes.models import (FavoritesList, Ingredient, IngredientRecipe,
-                            Recipe, ShoppingList, Tag)
 from users.models import Follow, User
 
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (CustomUserCreateSerializer, CustomUserSerializer,
-                          IngredientSerializer, RecipeGETSerializer,
-                          RecipePOSTSerializer, RecipeSerializer,
-                          TagSerializer)
+                          IngredientSerializer, RecipeBaseSerializer,
+                          RecipeGETSerializer, RecipePOSTSerializer,
+                          RecipeSerializer, TagSerializer)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -29,17 +30,50 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = (filters.SearchFilter, )
-    search_fields = ('name', )
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+
+
+class RecipeFilter(FilterSet):
+    """Кастомный фильтр для фильтрации во вьюсете рецепта."""
+    tags = ModelMultipleChoiceFilter(field_name='tags__slug',
+                                     to_field_name='slug',
+                                     queryset=Tag.objects.all(), )
+
+    is_favorited = BooleanFilter(method='filter_is_favorited')
+    is_in_shopping_cart = BooleanFilter(method='filter_is_in_shopping_cart')
+
+    def filter_is_favorited(self, queryset, name, value):
+        user = self.request.user
+        if user.is_anonymous:
+            return queryset
+        return queryset.filter(favorites__user=user)
+
+    def filter_is_in_shopping_cart(self, queryset, name, value):
+        user = self.request.user
+        if user.is_anonymous:
+            return queryset
+        return queryset.filter(shopping__user=user)
+
+    class Meta:
+        model = Recipe
+        fields = ['author', 'tags', 'is_favorited', 'is_in_shopping_cart', ]
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с моделью Recipe."""
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    permission_classes = (permissions.IsAuthenticated, IsAuthorOrReadOnly, )
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('author', 'tags',)
+    filterset_class = RecipeFilter
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [permissions.AllowAny]
+        else:
+            permission_classes = [permissions.IsAuthenticated,
+                                  IsAuthorOrReadOnly]
+        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
         if self.request.method in ['POST', 'PATCH']:
@@ -110,7 +144,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CustomUserViewSet(UserViewSet):  # viewsets.ModelViewSet):
+class CustomUserViewSet(UserViewSet):
     """Вьюсет для работы с моделью User."""
     queryset = User.objects.all()
 
@@ -136,10 +170,10 @@ class CustomUserViewSet(UserViewSet):  # viewsets.ModelViewSet):
         data = serializer.data
 
         for author in data:
-            recipes = Recipe.objects.filter(
-                author__id=author.get('id')).values('id', 'name', 'image',
-                                                    'cooking_time')
-            author['recipes'] = recipes
+            recipes = Recipe.objects.filter(author__id=author.get('id'))
+            recipes_serializer = RecipeBaseSerializer(recipes, many=True,
+                                                      read_only=True)
+            author['recipes'] = recipes_serializer.data
         return self.get_paginated_response(data)
 
     @action(methods=['post', 'delete'], detail=False,
@@ -162,11 +196,12 @@ class CustomUserViewSet(UserViewSet):  # viewsets.ModelViewSet):
             new_follow.save()
 
             serializer = self.get_serializer(author)
-            recipes = Recipe.objects.filter(
-                author__id=pk).values('id', 'name', 'image',
-                                      'cooking_time')
+
+            recipes = Recipe.objects.filter(author__id=pk)
+            recipes_serializer = RecipeBaseSerializer(recipes, many=True,
+                                                      read_only=True)
             data = serializer.data
-            data['recipes'] = recipes
+            data['recipes'] = recipes_serializer.data
             return Response(data)
         else:
             if not follow.exists():
@@ -181,3 +216,10 @@ class CustomUserViewSet(UserViewSet):  # viewsets.ModelViewSet):
         me = self.request.user
         serializer = self.get_serializer(me)
         return Response(serializer.data)
+
+    @action(["post"], detail=False, url_path='set_password')
+    def set_password(self, request):
+        """Функция меняет пароль пользователя."""
+        self.request.user.set_password(request.data["new_password"])
+        self.request.user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

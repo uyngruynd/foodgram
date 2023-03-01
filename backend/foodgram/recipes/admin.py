@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from .models import FavoritesList, Ingredient, Recipe, Tag
+from .models import (FavoritesList, Ingredient, IngredientRecipe, Recipe,
+                     ShoppingList, Tag)
 
 
 class TagInline(admin.TabularInline):
@@ -14,8 +15,8 @@ class IngredientInline(admin.TabularInline):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     """Настройки отображения модели Recipe в интерфейсе админки."""
-    list_display = ('name', 'author', 'is_favourite_count', )
-    list_filter = ('name', 'author', 'tags', )
+    list_display = ('name', 'author', 'is_favourite_count',)
+    list_filter = ('name', 'author', 'tags',)
     empty_value_display = '-пусто-'
 
     inlines = [TagInline, IngredientInline, ]
@@ -35,3 +36,6 @@ class IngredientAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Tag)
+admin.site.register(FavoritesList)
+admin.site.register(ShoppingList)
+admin.site.register(IngredientRecipe)

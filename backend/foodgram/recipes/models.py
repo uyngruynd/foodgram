@@ -49,7 +49,8 @@ class Recipe(models.Model):
     name = models.CharField(max_length=200, verbose_name='Имя', )
     image = models.ImageField(
         'Картинка',
-        upload_to='recipes/images/',
+        upload_to='recipes_images/',
+        max_length=1024,
     )
     text = models.TextField()
     ingredients = models.ManyToManyField(Ingredient,
@@ -77,10 +78,12 @@ class IngredientRecipe(models.Model):
     """Модель, связывающая рецепт с ингредиентами."""
     ingredient = models.ForeignKey(Ingredient,
                                    on_delete=models.CASCADE,
-                                   verbose_name='Ингредиент', )
+                                   verbose_name='Ингредиент',
+                                   related_name='recipe', )
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               verbose_name='Рецепт', )
+                               verbose_name='Рецепт',
+                               related_name='ingredient', )
     amount = models.PositiveSmallIntegerField(verbose_name='Количество', )
 
     def __str__(self):
@@ -92,15 +95,20 @@ class IngredientRecipe(models.Model):
                                     name='unique ingredient_recipe', )
         ]
 
+    class Meta:
+        verbose_name = 'Ингредиенты в рецептах'
+
 
 class ShoppingList(models.Model):
     """Модель для работы со списком покупок."""
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
-                             verbose_name='Пользователь', )
+                             verbose_name='Пользователь',
+                             related_name='shopping', )
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               verbose_name='Рецепт', )
+                               verbose_name='Рецепт',
+                               related_name='shopping', )
 
     def __str__(self):
         return f'{self.user} - {self.recipe}'
@@ -118,10 +126,12 @@ class FavoritesList(models.Model):
     """Модель для работы со списком избранного."""
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
-                             verbose_name='Пользователь', )
+                             verbose_name='Пользователь',
+                             related_name='favorites')
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               verbose_name='Рецепт', )
+                               verbose_name='Рецепт',
+                               related_name='favorites')
 
     def __str__(self):
         return f'{self.user} - {self.recipe}'
