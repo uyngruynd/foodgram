@@ -55,6 +55,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeBaseSerializer(serializers.ModelSerializer):
     """Описание упрощенного сериализатора для модели Recipe."""
+
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
@@ -72,7 +73,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = (
             'id', 'tags', 'author', 'ingredients', 'is_favorited',
-            'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time', )
+            'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time',)
 
     def to_representation(self, instance):
         output = super().to_representation(instance)
@@ -116,7 +117,14 @@ class RecipePOSTSerializer(RecipeSerializer):
                 'Фарш невозможно провернуть назад!')
         for ingredient in value.get('ingredients'):
             amount = ingredient.get('amount')
-            if not type(amount) is int or amount < 0:
+            try:
+                amount = int(amount)
+            except ValueError:
+                raise serializers.ValidationError(f'Количество для '
+                                                  f'ингредиента '
+                                                  f'{ingredient.get("name")} '
+                                                  f'должно быть числом!')
+            if amount < 0:
                 raise serializers.ValidationError(
                     f'Неверно задано количество для '
                     f'ингредиента: {ingredient.get("name")}!')
