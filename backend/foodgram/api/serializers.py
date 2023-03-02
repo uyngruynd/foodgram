@@ -1,4 +1,5 @@
 import base64
+from abc import ABC
 
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer, UserSerializer
@@ -34,6 +35,17 @@ class CustomUserSerializer(UserSerializer):
             return False
         return Follow.objects.filter(user=self.context['request'].user,
                                      author=obj).exists()
+
+
+class PasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(max_length=255, )
+    new_password = serializers.CharField(max_length=255, )
+
+    def validate(self, value):
+        if value.get('current_password') == value.get('new_password'):
+            raise serializers.ValidationError(
+                'Новый пароль должен отличаться от старого!')
+        return value
 
 
 class TagSerializer(serializers.ModelSerializer):

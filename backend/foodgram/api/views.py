@@ -13,9 +13,10 @@ from users.models import Follow, User
 
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (CustomUserCreateSerializer, CustomUserSerializer,
-                          IngredientSerializer, RecipeBaseSerializer,
-                          RecipeGETSerializer, RecipePOSTSerializer,
-                          RecipeSerializer, TagSerializer)
+                          IngredientSerializer, PasswordSerializer,
+                          RecipeBaseSerializer, RecipeGETSerializer,
+                          RecipePOSTSerializer, RecipeSerializer,
+                          TagSerializer)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -220,6 +221,13 @@ class CustomUserViewSet(UserViewSet):
     @action(["post"], detail=False, url_path='set_password')
     def set_password(self, request):
         """Функция меняет пароль пользователя."""
-        self.request.user.set_password(request.data["new_password"])
+        serializer = PasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not self.request.user.check_password(
+                serializer.data.get("current_password")):
+            return Response({"current_password": ["Wrong password."]},
+                            status=status.HTTP_400_BAD_REQUEST)
+        self.request.user.set_password(serializer.data["new_password"])
         self.request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)

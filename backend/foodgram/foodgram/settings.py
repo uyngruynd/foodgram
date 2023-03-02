@@ -134,3 +134,8 @@ DJOSER = {
         "user_list": ["rest_framework.permissions.AllowAny"],
     },
 }
+
+# try:
+#     from .settings_local import *
+# except ImportError:
+#     pass
