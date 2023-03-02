@@ -109,12 +109,14 @@ class RecipePOSTSerializer(RecipeSerializer):
 
     def validate(self, value):
         cooking_time = value.get('cooking_time')
-        if int(cooking_time) > 5000:
+        try:
+            cooking_time = int(cooking_time)
+        except ValueError:
+            raise serializers.ValidationError(f'Время приготовления '
+                                              f'должно быть числом!')
+        if cooking_time <= 0 or cooking_time > 5000:
             raise serializers.ValidationError(
-                'Никто не сможет стоять у плиты так долго!')
-        if int(cooking_time) < 0:
-            raise serializers.ValidationError(
-                'Фарш невозможно провернуть назад!')
+                'Время приготовления задано неверно!')
         for ingredient in value.get('ingredients'):
             amount = ingredient.get('amount')
             try:
